@@ -331,6 +331,8 @@ export function mountBridgeSetupCard(
 
   const status = document.createElement("span");
   status.className = "pi-bridge-setup__status";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
 
   let checking = false;
 

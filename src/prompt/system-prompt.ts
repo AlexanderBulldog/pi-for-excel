@@ -179,6 +179,8 @@ function buildLocalServicesSection(localServices: LocalServiceEntry[] | undefine
     "",
     "These run on the user's machine alongside Excel. Probed at session start.",
     "When a service is unavailable, use the skills tool to read the referenced skill before responding.",
+    "If a bridge-related tool result includes `Skill: <name>` (or `details.skillHint`), read that skill before giving setup guidance.",
+    "Do not guess platform-specific install commands — rely on the referenced skill.",
     "",
   ];
 

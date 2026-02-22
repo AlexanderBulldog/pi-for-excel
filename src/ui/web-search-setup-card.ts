@@ -120,6 +120,8 @@ function createProxyStep(options: ProxyStepOptions): HTMLDivElement {
 
   const status = document.createElement("span");
   status.className = "pi-search-setup__status";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
 
   let checking = false;
 
@@ -205,6 +207,8 @@ function createKeyStep(
 
   const status = document.createElement("span");
   status.className = "pi-search-setup__status";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
 
   let saving = false;
 

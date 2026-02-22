@@ -153,6 +153,7 @@ Concise record of recent tool behavior choices to avoid regressions. Update this
 ## Tmux bridge tool (`tmux`)
 - **Availability:** non-core tool, always registered via `createAllTools()`; execution is gated by `applyExperimentalToolGates()`.
 - **Gate model:** requires a healthy bridge URL (`tmux.bridge.url` override, else default `https://localhost:3341`) and successful `/health` probe.
+- **Gate failure contract:** blocked gate checks return structured `AgentToolResult` payloads (`details.gateReason`, `details.skillHint`) instead of throwing, enabling inline setup UX and deterministic agent recovery.
 - **Execution policy:** classified as `read/none` in workbook coordinator (no workbook lock writes or blueprint invalidation).
 - **Bridge implementation:** local helper script `scripts/tmux-bridge-server.mjs`.
   - one-command helper (`npx pi-for-excel-tmux-bridge`) defaults to real `tmux` mode
@@ -180,6 +181,7 @@ Concise record of recent tool behavior choices to avoid regressions. Update this
   - effective bridge URL = configured override or default `https://localhost:3340`.
   - first execution requires user confirmation when the effective bridge URL is reachable (cached once per bridge URL).
   - bridge-only tool (`libreoffice_convert`) is blocked when no reachable bridge URL is available.
+  - blocked gate checks return structured `AgentToolResult` payloads (`details.gateReason`, `details.skillHint`) rather than thrown errors.
 - **Execution policy:**
   - `python_run` + `libreoffice_convert` → `read/none` (no direct workbook mutation)
   - `python_transform_range` → `mutate/content` (writes transformed values into workbook)

@@ -124,13 +124,17 @@ export function buildTmuxBridgeGateErrorMessage(reason: TmuxBridgeGateReason): s
   switch (reason) {
     case "missing_bridge_url":
       return (
-        `Tmux bridge is not reachable at the default URL (${DEFAULT_TMUX_BRIDGE_URL}), ` +
+        "Terminal access is not available right now. " +
+        `Pi could not reach the tmux bridge at the default URL (${DEFAULT_TMUX_BRIDGE_URL}), ` +
         `and no URL override is configured (setting: ${TMUX_BRIDGE_URL_SETTING_KEY}).`
       );
     case "invalid_bridge_url":
-      return "Tmux bridge URL is invalid. Use a full URL like https://localhost:3341.";
+      return (
+        "Terminal access is not available because the tmux bridge URL is invalid. " +
+        "Use a full URL like https://localhost:3341."
+      );
     case "bridge_unreachable":
-      return "Tmux bridge is not reachable at the configured URL.";
+      return "Terminal access is not available right now because the tmux bridge is not reachable at the configured URL.";
   }
 }
 
@@ -138,12 +142,16 @@ export function buildPythonBridgeGateErrorMessage(reason: PythonBridgeGateReason
   switch (reason) {
     case "missing_bridge_url":
       return (
-        `Python bridge is not reachable at the default URL (${DEFAULT_PYTHON_BRIDGE_URL}), ` +
+        "Native Python is not available right now. " +
+        `Pi could not reach the Python bridge at the default URL (${DEFAULT_PYTHON_BRIDGE_URL}), ` +
         `and no URL override is configured (setting: ${PYTHON_BRIDGE_URL_SETTING_KEY}).`
       );
     case "invalid_bridge_url":
-      return "Python bridge URL is invalid. Use a full URL like https://localhost:3340.";
+      return (
+        "Native Python is not available because the Python bridge URL is invalid. " +
+        "Use a full URL like https://localhost:3340."
+      );
     case "bridge_unreachable":
-      return "Python bridge is not reachable at the configured URL.";
+      return "Native Python is not available right now because the Python bridge is not reachable at the configured URL.";
   }
 }

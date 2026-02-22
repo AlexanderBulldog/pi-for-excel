@@ -99,6 +99,7 @@ void test("keeps tmux tool registered and returns structured gate errors", async
   });
 
   const text = result.content[0]?.type === "text" ? result.content[0].text : "";
+  assert.match(text, /Terminal access is not available/i);
   assert.match(text, /default URL|URL override/i);
   assert.match(text, /Skill: tmux-bridge/i);
 
@@ -135,6 +136,7 @@ void test("tmux hard gate re-checks execution on every call", async () => {
 
   const missingResult = await gatedTmux.execute("call-2", {});
   const missingText = missingResult.content[0]?.type === "text" ? missingResult.content[0].text : "";
+  assert.match(missingText, /Terminal access is not available/i);
   assert.match(missingText, /default URL|URL override/i);
   assert.match(missingText, /Skill: tmux-bridge/i);
   const missingDetails: unknown = missingResult.details;
@@ -147,6 +149,7 @@ void test("tmux hard gate re-checks execution on every call", async () => {
 
   const unreachableResult = await gatedTmux.execute("call-3", {});
   const unreachableText = unreachableResult.content[0]?.type === "text" ? unreachableResult.content[0].text : "";
+  assert.match(unreachableText, /Terminal access is not available/i);
   assert.match(unreachableText, /not reachable/i);
   assert.match(unreachableText, /Skill: tmux-bridge/i);
   const unreachableDetails: unknown = unreachableResult.details;
@@ -172,6 +175,7 @@ void test("evaluateTmuxBridgeGate reports explicit reason codes", async () => {
 
   assert.equal(unreachable.allowed, false);
   assert.equal(unreachable.reason, "bridge_unreachable");
+  assert.match(buildTmuxBridgeGateErrorMessage(unreachable.reason), /Terminal access is not available/i);
   assert.match(buildTmuxBridgeGateErrorMessage(unreachable.reason), /not reachable/i);
 });
 
@@ -354,6 +358,7 @@ void test("python fallback tools return structured gate errors when configured b
 
   const result = await pythonTool.execute("call-python-unreachable", { code: "print('hi')" });
   const text = result.content[0]?.type === "text" ? result.content[0].text : "";
+  assert.match(text, /Native Python is not available/i);
   assert.match(text, /not reachable/i);
   assert.match(text, /Skill: python-bridge/i);
 
@@ -381,6 +386,7 @@ void test("python_transform_range gate errors keep transform detail kind", async
     code: "result = [[1], [2]]",
   });
   const text = result.content[0]?.type === "text" ? result.content[0].text : "";
+  assert.match(text, /Native Python is not available/i);
   assert.match(text, /not reachable/i);
   assert.match(text, /Skill: python-bridge/i);
 
@@ -409,6 +415,7 @@ void test("libreoffice_convert still requires configured + reachable bridge", as
     target_format: "csv",
   });
   const missingText = missingResult.content[0]?.type === "text" ? missingResult.content[0].text : "";
+  assert.match(missingText, /Native Python is not available/i);
   assert.match(missingText, /default URL|URL override|not configured/i);
   assert.match(missingText, /Skill: python-bridge/i);
 
@@ -430,6 +437,7 @@ void test("libreoffice_convert still requires configured + reachable bridge", as
     target_format: "csv",
   });
   const unreachableText = unreachableResult.content[0]?.type === "text" ? unreachableResult.content[0].text : "";
+  assert.match(unreachableText, /Native Python is not available/i);
   assert.match(unreachableText, /not reachable/i);
   assert.match(unreachableText, /Skill: python-bridge/i);
 
@@ -545,6 +553,7 @@ void test("evaluatePythonBridgeGate reports explicit reason codes", async () => 
 
   assert.equal(unreachable.allowed, false);
   assert.equal(unreachable.reason, "bridge_unreachable");
+  assert.match(buildPythonBridgeGateErrorMessage(unreachable.reason), /Native Python is not available/i);
   assert.match(buildPythonBridgeGateErrorMessage(unreachable.reason), /not reachable/i);
 });
 
@@ -553,7 +562,7 @@ void test("bridge gate helper detects only gate-shaped bridge details", () => {
     kind: "python_bridge",
     ok: false,
     action: "run_python",
-    error: "Python bridge is not reachable at the configured URL.",
+    error: "Native Python is not available right now because the Python bridge is not reachable at the configured URL.",
     gateReason: "bridge_unreachable",
     skillHint: "python-bridge",
   };

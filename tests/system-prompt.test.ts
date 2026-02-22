@@ -296,6 +296,8 @@ void test("system prompt renders Local Services for both bridges not running", (
   assert.match(prompt, /## Local Services/);
   assert.match(prompt, /Probed at session start/);
   assert.match(prompt, /use the skills tool to read the referenced skill before responding/);
+  assert.match(prompt, /tool result includes `Skill: <name>`/);
+  assert.match(prompt, /Do not guess platform-specific install commands/);
   assert.match(prompt, /\*\*Python \(native\)\:\*\* not running/);
   assert.match(prompt, /Pyodide/);
   assert.match(prompt, /read skill "python-bridge"/);

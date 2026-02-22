@@ -574,7 +574,12 @@ function shouldAttachTmuxBridgeSkillHint(message: string): boolean {
     || normalized.includes("tmux-bridge-url")
     || normalized.includes("bridge url")
     || normalized.includes("missing_bridge_url")
-    || normalized.includes("bridge");
+    || normalized.includes("bridge unavailable")
+    || normalized.includes("bridge request")
+    || normalized.includes("failed to fetch")
+    || normalized.includes("fetch failed")
+    || normalized.includes("network request failed")
+    || normalized.includes("econnrefused");
 }
 
 export function createTmuxTool(

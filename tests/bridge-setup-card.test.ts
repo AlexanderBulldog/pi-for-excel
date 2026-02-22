@@ -24,7 +24,7 @@ void test("shows tmux setup card for tmux bridge gate failures", () => {
     kind: "tmux_bridge",
     ok: false,
     action: "capture_pane",
-    error: "Tmux bridge is not reachable at the configured URL.",
+    error: "Terminal access is not available right now because the tmux bridge is not reachable at the configured URL.",
     gateReason: "bridge_unreachable",
     skillHint: "tmux-bridge",
   };
@@ -44,7 +44,7 @@ void test("uses bridge URL from details when testing tmux setup", () => {
     ok: false,
     action: "list_sessions",
     bridgeUrl: "https://localhost:4441",
-    error: "Tmux bridge is not reachable at the configured URL.",
+    error: "Terminal access is not available right now because the tmux bridge is not reachable at the configured URL.",
     gateReason: "bridge_unreachable",
     skillHint: "tmux-bridge",
   };
@@ -59,7 +59,7 @@ void test("does not probe default URL when tmux bridge setting is invalid", asyn
     kind: "tmux_bridge",
     ok: false,
     action: "list_sessions",
-    error: "Tmux bridge URL is invalid. Use a full URL like https://localhost:3341.",
+    error: "Terminal access is not available because the tmux bridge URL is invalid. Use a full URL like https://localhost:3341.",
     gateReason: "invalid_bridge_url",
     skillHint: "tmux-bridge",
   };
@@ -102,7 +102,7 @@ void test("shows python setup card for libreoffice bridge outages", () => {
     ok: false,
     action: "convert",
     bridgeUrl: "https://localhost:4450",
-    error: "Python bridge is not reachable at the configured URL.",
+    error: "Native Python is not available right now because the Python bridge is not reachable at the configured URL.",
     gateReason: "bridge_unreachable",
     skillHint: "python-bridge",
   };
@@ -118,7 +118,7 @@ void test("shows setup card for transform-range gate failures", () => {
   const details: PythonTransformRangeDetails = {
     kind: "python_transform_range",
     blocked: false,
-    error: "Python bridge is not reachable at the configured URL.",
+    error: "Native Python is not available right now because the Python bridge is not reachable at the configured URL.",
     gateReason: "bridge_unreachable",
     skillHint: "python-bridge",
   };
@@ -149,7 +149,7 @@ void test("testBridgeSetupConnection probes the resolved URL", async () => {
     ok: false,
     action: "run_python",
     bridgeUrl: "https://localhost:5540",
-    error: "Python bridge is not reachable at the configured URL.",
+    error: "Native Python is not available right now because the Python bridge is not reachable at the configured URL.",
     gateReason: "bridge_unreachable",
     skillHint: "python-bridge",
   };
