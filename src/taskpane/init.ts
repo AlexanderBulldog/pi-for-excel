@@ -91,6 +91,8 @@ import {
 import { PI_INTEGRATIONS_CHANGED_EVENT } from "../integrations/events.js";
 import { getExternalToolsEnabled, resolveConfiguredIntegrationIds } from "../integrations/store.js";
 import { buildSystemPrompt } from "../prompt/system-prompt.js";
+import type { LocalServiceEntry } from "../tools/bridge-health.js";
+import { probeLocalServices } from "../tools/bridge-health.js";
 import {
   buildAgentSkillPromptEntries,
   listAgentSkills,
@@ -481,6 +483,13 @@ export async function initTaskpane(opts: {
     }
   };
 
+  // Probe local bridge services once at init. Snapshot is stable for the session.
+  let localServicesSnapshot: LocalServiceEntry[] = [];
+  void probeLocalServices().then(
+    (result) => { localServicesSnapshot = result; },
+    (error: unknown) => { console.warn("[pi] Local services probe failed:", error); },
+  );
+
   const buildRuntimeSystemPrompt = async (args: {
     workbookId: string | null;
     activeIntegrationIds: readonly string[];
@@ -500,6 +509,7 @@ export async function initTaskpane(opts: {
         workbookInstructions: workbookRules,
         activeIntegrations,
         activeConnections,
+        localServices: localServicesSnapshot,
         availableSkills,
         executionMode: getExecutionMode(),
         conventions,
@@ -508,6 +518,7 @@ export async function initTaskpane(opts: {
       setRulesActive(false);
       return buildSystemPrompt({
         activeConnections,
+        localServices: localServicesSnapshot,
         availableSkills,
         executionMode: getExecutionMode(),
       });
