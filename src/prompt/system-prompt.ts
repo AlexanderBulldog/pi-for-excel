@@ -177,25 +177,21 @@ function buildLocalServicesSection(localServices: LocalServiceEntry[] | undefine
   ];
 
   for (const service of localServices) {
-    lines.push(formatLocalServiceLine(service));
+    lines.push(service.name === "python"
+      ? formatPythonServiceLine(service)
+      : formatTmuxServiceLine(service));
   }
 
   return lines.join("\n").trimEnd();
 }
 
-function formatLocalServiceLine(service: LocalServiceEntry): string {
-  if (service.name === "python") {
-    return formatPythonServiceLine(service);
-  }
-  return formatTmuxServiceLine(service);
-}
-
 function formatPythonServiceLine(service: LocalServiceEntry & { name: "python" }): string {
+  const label = service.displayName;
   if (service.status === "not_running") {
     return (
-      `- **Python (native):** not running. Python tools use in-browser Pyodide, which handles most tasks (numpy, pandas, scipy). ` +
+      `- **${label}:** not running. Python tools use in-browser Pyodide, which handles most tasks (numpy, pandas, scipy). ` +
       `If the user needs C extensions, local filesystem access, or file conversion via LibreOffice, suggest setting up the native Python bridge — ` +
-      `read skill "python-bridge" for instructions.`
+      `read skill "${service.skillName}" for instructions.`
     );
   }
 
@@ -203,33 +199,34 @@ function formatPythonServiceLine(service: LocalServiceEntry & { name: "python" }
 
   if (service.status === "partial" && service.libreofficeAvailable === false) {
     return (
-      `- **Python (native):** running — ${versionPart}, libreoffice not installed. ` +
+      `- **${label}:** running — ${versionPart}, libreoffice not installed. ` +
       `Full Python ecosystem available but file conversion (PDF, DOCX, etc.) requires LibreOffice — ` +
-      `read skill "python-bridge" for install instructions.`
+      `read skill "${service.skillName}" for install instructions.`
     );
   }
 
   // "running" — fully healthy
   const loPart = service.libreofficeAvailable ? ", libreoffice available" : "";
   return (
-    `- **Python (native):** running — ${versionPart}${loPart}. ` +
+    `- **${label}:** running — ${versionPart}${loPart}. ` +
     `Uses local Python instead of in-browser Pyodide. Full ecosystem available (C extensions, filesystem, long-running scripts, file conversion via LibreOffice).`
   );
 }
 
 function formatTmuxServiceLine(service: LocalServiceEntry & { name: "tmux" }): string {
+  const label = service.displayName;
   if (service.status === "not_running") {
     return (
-      `- **Terminal (tmux):** not running. If a task would benefit from running shell commands locally ` +
+      `- **${label}:** not running. If a task would benefit from running shell commands locally ` +
       `(git, build tools, file management), explain what terminal access would enable and offer to help set it up — ` +
-      `read skill "tmux-bridge" for instructions.`
+      `read skill "${service.skillName}" for instructions.`
     );
   }
 
   if (service.status === "partial") {
     return (
-      `- **Terminal (tmux):** bridge running but tmux not fully available. ` +
-      `Read skill "tmux-bridge" for troubleshooting.`
+      `- **${label}:** bridge running but tmux not fully available. ` +
+      `Read skill "${service.skillName}" for troubleshooting.`
     );
   }
 
@@ -239,7 +236,7 @@ function formatTmuxServiceLine(service: LocalServiceEntry & { name: "tmux" }): s
     ? `, ${service.tmuxSessions} active session${service.tmuxSessions === 1 ? "" : "s"}`
     : "";
   return (
-    `- **Terminal (tmux):** running — ${versionPart}${sessionsPart}. ` +
+    `- **${label}:** running — ${versionPart}${sessionsPart}. ` +
     `Lets you run shell commands on the user's machine (git, build tools, file management, installed CLIs).`
   );
 }

@@ -91,8 +91,7 @@ import {
 import { PI_INTEGRATIONS_CHANGED_EVENT } from "../integrations/events.js";
 import { getExternalToolsEnabled, resolveConfiguredIntegrationIds } from "../integrations/store.js";
 import { buildSystemPrompt } from "../prompt/system-prompt.js";
-import type { LocalServiceEntry } from "../tools/bridge-health.js";
-import { probeLocalServices } from "../tools/bridge-health.js";
+import { probeLocalServices, type LocalServiceEntry } from "../tools/bridge-health.js";
 import {
   buildAgentSkillPromptEntries,
   listAgentSkills,
