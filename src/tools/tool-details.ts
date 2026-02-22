@@ -201,6 +201,7 @@ export interface PythonTransformRangeDetails {
   changes?: WorkbookCellChangeSummary;
   recovery?: RecoveryCheckpointDetails;
   error?: string;
+  gateReason?: BridgeGateReason;
   skillHint?: string;
 }
 
@@ -408,7 +409,13 @@ export type ExcelToolDetails =
 export type BridgeGateErrorDetails =
   | (TmuxBridgeDetails & { ok: false; gateReason: BridgeGateReason; skillHint: string })
   | (PythonBridgeDetails & { ok: false; gateReason: BridgeGateReason; skillHint: string })
-  | (LibreOfficeBridgeDetails & { ok: false; gateReason: BridgeGateReason; skillHint: string });
+  | (LibreOfficeBridgeDetails & { ok: false; gateReason: BridgeGateReason; skillHint: string })
+  | (PythonTransformRangeDetails & {
+    blocked: false;
+    gateReason: BridgeGateReason;
+    skillHint: string;
+    error: string;
+  });
 
 function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || typeof value === "string";
@@ -835,6 +842,13 @@ export function isBridgeGateError(value: unknown): value is BridgeGateErrorDetai
       && typeof value.skillHint === "string";
   }
 
+  if (isPythonTransformRangeDetails(value)) {
+    return value.blocked === false
+      && typeof value.error === "string"
+      && isBridgeGateReason(value.gateReason)
+      && typeof value.skillHint === "string";
+  }
+
   return false;
 }
 
@@ -854,6 +868,7 @@ export function isPythonTransformRangeDetails(value: unknown): value is PythonTr
     isOptionalWorkbookCellChangeSummary(value.changes) &&
     isOptionalRecoveryCheckpointDetails(value.recovery) &&
     isOptionalString(value.error) &&
+    isOptionalBridgeGateReason(value.gateReason) &&
     isOptionalString(value.skillHint)
   );
 }

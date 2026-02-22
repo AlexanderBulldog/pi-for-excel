@@ -15,6 +15,7 @@ import {
   isBridgeGateError,
   isLibreOfficeBridgeDetails,
   isPythonBridgeDetails,
+  isPythonTransformRangeDetails,
   isTmuxBridgeDetails,
 } from "../src/tools/tool-details.ts";
 
@@ -54,6 +55,14 @@ function assertPythonGateError(details: unknown): void {
   assert.equal(details.ok, false);
   assert.equal(details.gateReason, "bridge_unreachable");
   assert.equal(details.skillHint, "python-bridge");
+}
+
+function assertPythonTransformRangeGateError(details: unknown): void {
+  assert.ok(isPythonTransformRangeDetails(details));
+  assert.equal(details.blocked, false);
+  assert.equal(details.gateReason, "bridge_unreachable");
+  assert.equal(details.skillHint, "python-bridge");
+  assert.match(details.error ?? "", /not reachable/i);
 }
 
 function assertLibreOfficeGateError(
@@ -350,6 +359,34 @@ void test("python fallback tools return structured gate errors when configured b
 
   const resultDetails: unknown = result.details;
   assertPythonGateError(resultDetails);
+
+  assert.equal(executeCount, 0);
+});
+
+void test("python_transform_range gate errors keep transform detail kind", async () => {
+  let executeCount = 0;
+
+  const [tool] = await applyExperimentalToolGates([
+    createTestTool("python_transform_range", () => {
+      executeCount += 1;
+    }),
+  ], {
+    getPythonBridgeUrl: () => Promise.resolve("https://localhost:3340"),
+    validatePythonBridgeUrl: () => "https://localhost:3340",
+    probePythonBridge: () => Promise.resolve(false),
+  });
+
+  const result = await tool.execute("call-python-transform-unreachable", {
+    range: "Sheet1!A1:A2",
+    code: "result = [[1], [2]]",
+  });
+  const text = result.content[0]?.type === "text" ? result.content[0].text : "";
+  assert.match(text, /not reachable/i);
+  assert.match(text, /Skill: python-bridge/i);
+
+  const details: unknown = result.details;
+  assertPythonTransformRangeGateError(details);
+  assert.equal(isBridgeGateError(details), true);
 
   assert.equal(executeCount, 0);
 });

@@ -22,6 +22,7 @@ import {
 import type {
   LibreOfficeBridgeDetails,
   PythonBridgeDetails,
+  PythonTransformRangeDetails,
   TmuxBridgeDetails,
 } from "../tool-details.js";
 
@@ -103,6 +104,28 @@ function buildPythonGateErrorResult(args: {
       kind: "python_bridge",
       ok: false,
       action: getPythonActionForTool(args.toolName),
+      bridgeUrl: args.bridgeUrl,
+      error: message,
+      gateReason: args.reason,
+      skillHint: "python-bridge",
+    },
+  };
+}
+
+function buildPythonTransformRangeGateErrorResult(args: {
+  reason: PythonBridgeGateReason;
+  bridgeUrl?: string;
+}): AgentToolResult<PythonTransformRangeDetails> {
+  const message = buildPythonBridgeGateErrorMessage(args.reason);
+
+  return {
+    content: [{
+      type: "text",
+      text: buildGateErrorText(message, "python-bridge"),
+    }],
+    details: {
+      kind: "python_transform_range",
+      blocked: false,
       bridgeUrl: args.bridgeUrl,
       error: message,
       gateReason: args.reason,
@@ -340,6 +363,13 @@ function wrapPythonToolWithOptionalBridgeApproval(
 
         // Missing/invalid URL means the tool can still run via Pyodide fallback.
         if (reason === "bridge_unreachable") {
+          if (tool.name === "python_transform_range") {
+            return buildPythonTransformRangeGateErrorResult({
+              reason,
+              bridgeUrl: gate.bridgeUrl,
+            });
+          }
+
           return buildPythonGateErrorResult({
             reason,
             bridgeUrl: gate.bridgeUrl,
