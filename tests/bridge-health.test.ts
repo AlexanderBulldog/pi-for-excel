@@ -95,6 +95,30 @@ void test("reports partial when python available but libreoffice missing", async
 });
 
 // ---------------------------------------------------------------------------
+// Python bridge up, but Python binary missing → not_running
+// ---------------------------------------------------------------------------
+
+void test("reports not_running when bridge is up but python binary missing", async () => {
+  const entries = await probeLocalServices(makeDeps({
+    fetchHealth: (url) => {
+      if (url.includes("3340")) {
+        return Promise.resolve({
+          ok: true,
+          mode: "real",
+          python: { available: false, error: "No Python binary found" },
+          libreoffice: { available: false },
+        });
+      }
+      return Promise.resolve(null);
+    },
+  }));
+
+  const python = findPython(entries);
+  assert.ok(python);
+  assert.equal(python.status, "not_running");
+});
+
+// ---------------------------------------------------------------------------
 // Tmux bridge fully healthy
 // ---------------------------------------------------------------------------
 

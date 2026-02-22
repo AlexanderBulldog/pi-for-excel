@@ -133,7 +133,9 @@ function parsePythonHealth(payload: unknown): PythonServiceEntry {
   const libreofficeAvailable = libreoffice?.available === true;
 
   if (!pythonAvailable) {
-    return { ...base, status: "partial", libreofficeAvailable: false };
+    // Bridge process is running but Python binary is missing — treat as not_running
+    // since python_run calls will fail with 501.
+    return base;
   }
 
   const status: LocalServiceStatus = libreofficeAvailable ? "running" : "partial";
