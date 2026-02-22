@@ -28,7 +28,7 @@ export type BridgeSetupCardDetails =
 interface BridgeSetupCardModel {
   title: string;
   command: string;
-  probeUrl: string;
+  probeUrl: string | null;
 }
 
 interface BridgeSetupCardDependencies {
@@ -112,6 +112,22 @@ function isSetupFailure(args: {
   return normalized === "no_python_runtime" || normalized.includes("bridge");
 }
 
+function resolveProbeUrl(args: {
+  bridgeUrl: string | undefined;
+  gateReason: BridgeGateReason | undefined;
+  defaultUrl: string;
+}): string | null {
+  if (args.bridgeUrl) {
+    return args.bridgeUrl;
+  }
+
+  if (args.gateReason === "invalid_bridge_url") {
+    return null;
+  }
+
+  return args.defaultUrl;
+}
+
 function toTmuxModel(details: TmuxBridgeDetails): BridgeSetupCardModel | null {
   if (details.ok !== false) {
     return null;
@@ -131,7 +147,11 @@ function toTmuxModel(details: TmuxBridgeDetails): BridgeSetupCardModel | null {
   return {
     title: "Terminal access is not available",
     command: TMUX_BRIDGE_SETUP_COMMAND,
-    probeUrl: details.bridgeUrl ?? DEFAULT_TMUX_BRIDGE_URL,
+    probeUrl: resolveProbeUrl({
+      bridgeUrl: details.bridgeUrl,
+      gateReason: details.gateReason,
+      defaultUrl: DEFAULT_TMUX_BRIDGE_URL,
+    }),
   };
 }
 
@@ -158,7 +178,11 @@ function toPythonModel(details: PythonBridgeDetails): BridgeSetupCardModel | nul
   return {
     title,
     command: PYTHON_BRIDGE_SETUP_COMMAND,
-    probeUrl: details.bridgeUrl ?? DEFAULT_PYTHON_BRIDGE_URL,
+    probeUrl: resolveProbeUrl({
+      bridgeUrl: details.bridgeUrl,
+      gateReason: details.gateReason,
+      defaultUrl: DEFAULT_PYTHON_BRIDGE_URL,
+    }),
   };
 }
 
@@ -181,7 +205,11 @@ function toLibreOfficeModel(details: LibreOfficeBridgeDetails): BridgeSetupCardM
   return {
     title: "File conversion is unavailable",
     command: PYTHON_BRIDGE_SETUP_COMMAND,
-    probeUrl: details.bridgeUrl ?? DEFAULT_PYTHON_BRIDGE_URL,
+    probeUrl: resolveProbeUrl({
+      bridgeUrl: details.bridgeUrl,
+      gateReason: details.gateReason,
+      defaultUrl: DEFAULT_PYTHON_BRIDGE_URL,
+    }),
   };
 }
 
@@ -204,7 +232,11 @@ function toTransformRangeModel(details: PythonTransformRangeDetails): BridgeSetu
   return {
     title: "Python transform is unavailable",
     command: PYTHON_BRIDGE_SETUP_COMMAND,
-    probeUrl: details.bridgeUrl ?? DEFAULT_PYTHON_BRIDGE_URL,
+    probeUrl: resolveProbeUrl({
+      bridgeUrl: details.bridgeUrl,
+      gateReason: details.gateReason,
+      defaultUrl: DEFAULT_PYTHON_BRIDGE_URL,
+    }),
   };
 }
 
@@ -237,7 +269,7 @@ export async function testBridgeSetupConnection(
   probeBridge: (bridgeUrl: string) => Promise<boolean> = probeBridgeHealth,
 ): Promise<boolean> {
   const model = resolveBridgeSetupCardModel(details);
-  if (!model) {
+  if (!model || !model.probeUrl) {
     return false;
   }
 
@@ -302,8 +334,15 @@ export function mountBridgeSetupCard(
 
   let checking = false;
 
+  if (!model.probeUrl) {
+    testButton.disabled = true;
+    status.textContent = "Set a valid bridge URL first, then test again.";
+    status.className = "pi-bridge-setup__status is-warn";
+  }
+
   testButton.addEventListener("click", () => {
-    if (checking) {
+    const probeUrl = model.probeUrl;
+    if (!probeUrl || checking) {
       return;
     }
 
@@ -313,7 +352,7 @@ export function mountBridgeSetupCard(
     status.textContent = "Checking bridge…";
     status.className = "pi-bridge-setup__status";
 
-    void probeBridge(model.probeUrl).then(
+    void probeBridge(probeUrl).then(
       (reachable) => {
         if (reachable) {
           status.textContent = "✓ Bridge detected — ask the assistant to try again.";

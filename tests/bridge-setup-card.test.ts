@@ -54,6 +54,30 @@ void test("uses bridge URL from details when testing tmux setup", () => {
   assert.equal(model.probeUrl, "https://localhost:4441");
 });
 
+void test("does not probe default URL when tmux bridge setting is invalid", async () => {
+  const details: TmuxBridgeDetails = {
+    kind: "tmux_bridge",
+    ok: false,
+    action: "list_sessions",
+    error: "Tmux bridge URL is invalid. Use a full URL like https://localhost:3341.",
+    gateReason: "invalid_bridge_url",
+    skillHint: "tmux-bridge",
+  };
+
+  const model = resolveBridgeSetupCardModel(details);
+  assert.ok(model);
+  assert.equal(model.probeUrl, null);
+
+  let probeCalled = false;
+  const reachable = await testBridgeSetupConnection(details, () => {
+    probeCalled = true;
+    return Promise.resolve(true);
+  });
+
+  assert.equal(reachable, false);
+  assert.equal(probeCalled, false);
+});
+
 void test("shows python setup card when no Python runtime is available", () => {
   const details: PythonBridgeDetails = {
     kind: "python_bridge",
