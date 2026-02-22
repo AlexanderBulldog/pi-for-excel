@@ -388,6 +388,20 @@ function formatSuccessMessage(inputAddress: string, output: Exclude<WriteOutputR
   return lines.join("\n\n");
 }
 
+function withSkillHintLine(message: string, skillName: string): string {
+  return `${message}\nSkill: ${skillName}`;
+}
+
+function shouldAttachPythonBridgeSkillHint(message: string): boolean {
+  const normalized = message.toLowerCase();
+
+  return normalized.includes("python bridge")
+    || normalized.includes("bridge url")
+    || normalized.includes("no_python_runtime")
+    || normalized.includes("webassembly workers")
+    || normalized.includes("bridge");
+}
+
 export function createPythonTransformRangeTool(
   dependencies: PythonTransformRangeToolDependencies = {},
 ): AgentTool<TSchema, PythonTransformRangeDetails> {
@@ -461,16 +475,19 @@ export function createPythonTransformRangeTool(
             return {
               content: [{
                 type: "text",
-                text:
+                text: withSkillHintLine(
                   "Python is unavailable in this environment. " +
-                  "The current browser/WebView does not support WebAssembly Workers (needed for in-browser Pyodide). " +
-                  "Power users can configure a native Python bridge in Settings → Experimental.",
+                    "The current browser/WebView does not support WebAssembly Workers (needed for in-browser Pyodide). " +
+                    "Power users can configure a native Python bridge in Settings → Experimental.",
+                  "python-bridge",
+                ),
               }],
               details: {
                 kind: "python_transform_range",
                 blocked: false,
                 inputAddress: sourceAddress,
                 error: "no_python_runtime",
+                skillHint: "python-bridge",
               },
             };
           }
@@ -613,12 +630,22 @@ export function createPythonTransformRangeTool(
         return successResult;
       } catch (error: unknown) {
         const message = getErrorMessage(error);
+        const skillHint = shouldAttachPythonBridgeSkillHint(message)
+          ? "python-bridge"
+          : undefined;
+
         return {
-          content: [{ type: "text", text: `Error: ${message}` }],
+          content: [{
+            type: "text",
+            text: skillHint
+              ? `Error: ${withSkillHintLine(message, skillHint)}`
+              : `Error: ${message}`,
+          }],
           details: {
             kind: "python_transform_range",
             blocked: false,
             error: message,
+            skillHint,
           },
         };
       }

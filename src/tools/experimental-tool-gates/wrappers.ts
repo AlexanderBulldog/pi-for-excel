@@ -1,4 +1,4 @@
-import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 
 import {
   buildPythonBridgeGateErrorMessage,
@@ -16,7 +16,14 @@ import {
   type ExperimentalToolGateDependencies,
   type OfficeJsExecuteApprovalRequest,
   type PythonBridgeApprovalRequest,
+  type PythonBridgeGateReason,
+  type TmuxBridgeGateReason,
 } from "./types.js";
+import type {
+  LibreOfficeBridgeDetails,
+  PythonBridgeDetails,
+  TmuxBridgeDetails,
+} from "../tool-details.js";
 
 function isRecordObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -33,6 +40,98 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   }
 
   throw new Error("Aborted");
+}
+
+function getTmuxActionFromParams(params: unknown): string {
+  if (!isRecordObject(params)) {
+    return "list_sessions";
+  }
+
+  const action = params.action;
+  return typeof action === "string" && action.trim().length > 0
+    ? action.trim()
+    : "list_sessions";
+}
+
+function getPythonActionForTool(toolName: string): string {
+  return toolName === "python_transform_range"
+    ? "transform_range"
+    : "run_python";
+}
+
+function buildGateErrorText(message: string, skillName: string): string {
+  return `${message}\nSkill: ${skillName}`;
+}
+
+function buildTmuxGateErrorResult(args: {
+  reason: TmuxBridgeGateReason;
+  bridgeUrl?: string;
+  params: unknown;
+}): AgentToolResult<TmuxBridgeDetails> {
+  const message = buildTmuxBridgeGateErrorMessage(args.reason);
+
+  return {
+    content: [{
+      type: "text",
+      text: buildGateErrorText(message, "tmux-bridge"),
+    }],
+    details: {
+      kind: "tmux_bridge",
+      ok: false,
+      action: getTmuxActionFromParams(args.params),
+      bridgeUrl: args.bridgeUrl,
+      error: message,
+      gateReason: args.reason,
+      skillHint: "tmux-bridge",
+    },
+  };
+}
+
+function buildPythonGateErrorResult(args: {
+  reason: PythonBridgeGateReason;
+  bridgeUrl?: string;
+  toolName: string;
+}): AgentToolResult<PythonBridgeDetails> {
+  const message = buildPythonBridgeGateErrorMessage(args.reason);
+
+  return {
+    content: [{
+      type: "text",
+      text: buildGateErrorText(message, "python-bridge"),
+    }],
+    details: {
+      kind: "python_bridge",
+      ok: false,
+      action: getPythonActionForTool(args.toolName),
+      bridgeUrl: args.bridgeUrl,
+      error: message,
+      gateReason: args.reason,
+      skillHint: "python-bridge",
+    },
+  };
+}
+
+function buildLibreOfficeGateErrorResult(args: {
+  reason: PythonBridgeGateReason;
+  bridgeUrl?: string;
+}): AgentToolResult<LibreOfficeBridgeDetails> {
+  const message = buildPythonBridgeGateErrorMessage(args.reason);
+
+  return {
+    content: [{
+      type: "text",
+      text: buildGateErrorText(message, "python-bridge"),
+    }],
+    details: {
+      kind: "libreoffice_bridge",
+      ok: false,
+      action: "convert",
+      bridgeUrl: args.bridgeUrl,
+      error: message,
+      gateReason: args.reason,
+      skillHint: "python-bridge",
+    },
+  };
 }
 
 export function buildPythonBridgeApprovalMessage(
@@ -135,7 +234,11 @@ function wrapTmuxToolWithHardGate(
       const gate = await evaluateTmuxBridgeGate(dependencies);
       if (!gate.allowed) {
         const reason = gate.reason ?? "bridge_unreachable";
-        throw new Error(buildTmuxBridgeGateErrorMessage(reason));
+        return buildTmuxGateErrorResult({
+          reason,
+          bridgeUrl: gate.bridgeUrl,
+          params,
+        });
       }
 
       throwIfAborted(signal);
@@ -237,7 +340,11 @@ function wrapPythonToolWithOptionalBridgeApproval(
 
         // Missing/invalid URL means the tool can still run via Pyodide fallback.
         if (reason === "bridge_unreachable") {
-          throw new Error(buildPythonBridgeGateErrorMessage(reason));
+          return buildPythonGateErrorResult({
+            reason,
+            bridgeUrl: gate.bridgeUrl,
+            toolName: tool.name,
+          });
         }
       }
 
@@ -264,7 +371,10 @@ function wrapPythonBridgeOnlyToolWithApprovalGate(
       const gate = await evaluatePythonBridgeGate(dependencies);
       if (!gate.allowed) {
         const reason = gate.reason ?? "bridge_unreachable";
-        throw new Error(buildPythonBridgeGateErrorMessage(reason));
+        return buildLibreOfficeGateErrorResult({
+          reason,
+          bridgeUrl: gate.bridgeUrl,
+        });
       }
 
       const bridgeUrl = gate.bridgeUrl;

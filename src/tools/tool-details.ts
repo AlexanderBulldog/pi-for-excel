@@ -143,6 +143,8 @@ export interface ReadRangeCsvDetails {
   csv: string;
 }
 
+export type BridgeGateReason = "missing_bridge_url" | "invalid_bridge_url" | "bridge_unreachable";
+
 export interface TmuxBridgeDetails {
   kind: "tmux_bridge";
   ok: boolean;
@@ -152,6 +154,8 @@ export interface TmuxBridgeDetails {
   sessionsCount?: number;
   outputPreview?: string;
   error?: string;
+  gateReason?: BridgeGateReason;
+  skillHint?: string;
 }
 
 export interface PythonBridgeDetails {
@@ -165,6 +169,8 @@ export interface PythonBridgeDetails {
   resultPreview?: string;
   truncated?: boolean;
   error?: string;
+  gateReason?: BridgeGateReason;
+  skillHint?: string;
 }
 
 export interface LibreOfficeBridgeDetails {
@@ -178,6 +184,8 @@ export interface LibreOfficeBridgeDetails {
   bytes?: number;
   converter?: string;
   error?: string;
+  gateReason?: BridgeGateReason;
+  skillHint?: string;
 }
 
 export interface PythonTransformRangeDetails {
@@ -193,6 +201,7 @@ export interface PythonTransformRangeDetails {
   changes?: WorkbookCellChangeSummary;
   recovery?: RecoveryCheckpointDetails;
   error?: string;
+  skillHint?: string;
 }
 
 export interface WorkbookHistorySnapshotSummary {
@@ -396,6 +405,11 @@ export type ExcelToolDetails =
   | FilesToolDetails
   | ConnectionToolErrorDetails;
 
+export type BridgeGateErrorDetails =
+  | (TmuxBridgeDetails & { ok: false; gateReason: BridgeGateReason; skillHint: string })
+  | (PythonBridgeDetails & { ok: false; gateReason: BridgeGateReason; skillHint: string })
+  | (LibreOfficeBridgeDetails & { ok: false; gateReason: BridgeGateReason; skillHint: string });
+
 function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || typeof value === "string";
 }
@@ -420,6 +434,16 @@ function isOptionalNumber(value: unknown): value is number | undefined {
 
 function isOptionalBoolean(value: unknown): value is boolean | undefined {
   return value === undefined || typeof value === "boolean";
+}
+
+function isBridgeGateReason(value: unknown): value is BridgeGateReason {
+  return value === "missing_bridge_url"
+    || value === "invalid_bridge_url"
+    || value === "bridge_unreachable";
+}
+
+function isOptionalBridgeGateReason(value: unknown): value is BridgeGateReason | undefined {
+  return value === undefined || isBridgeGateReason(value);
 }
 
 function isToolOutputTruncationStrategy(value: unknown): value is ToolOutputTruncationStrategy {
@@ -746,7 +770,9 @@ export function isTmuxBridgeDetails(value: unknown): value is TmuxBridgeDetails 
     isOptionalString(value.session) &&
     isOptionalNumber(value.sessionsCount) &&
     isOptionalString(value.outputPreview) &&
-    isOptionalString(value.error)
+    isOptionalString(value.error) &&
+    isOptionalBridgeGateReason(value.gateReason) &&
+    isOptionalString(value.skillHint)
   );
 }
 
@@ -765,7 +791,9 @@ export function isPythonBridgeDetails(value: unknown): value is PythonBridgeDeta
     isOptionalString(value.stderrPreview) &&
     isOptionalString(value.resultPreview) &&
     (truncated === undefined || typeof truncated === "boolean") &&
-    isOptionalString(value.error)
+    isOptionalString(value.error) &&
+    isOptionalBridgeGateReason(value.gateReason) &&
+    isOptionalString(value.skillHint)
   );
 }
 
@@ -782,8 +810,32 @@ export function isLibreOfficeBridgeDetails(value: unknown): value is LibreOffice
     isOptionalString(value.outputPath) &&
     isOptionalNumber(value.bytes) &&
     isOptionalString(value.converter) &&
-    isOptionalString(value.error)
+    isOptionalString(value.error) &&
+    isOptionalBridgeGateReason(value.gateReason) &&
+    isOptionalString(value.skillHint)
   );
+}
+
+export function isBridgeGateError(value: unknown): value is BridgeGateErrorDetails {
+  if (isTmuxBridgeDetails(value)) {
+    return value.ok === false
+      && isBridgeGateReason(value.gateReason)
+      && typeof value.skillHint === "string";
+  }
+
+  if (isPythonBridgeDetails(value)) {
+    return value.ok === false
+      && isBridgeGateReason(value.gateReason)
+      && typeof value.skillHint === "string";
+  }
+
+  if (isLibreOfficeBridgeDetails(value)) {
+    return value.ok === false
+      && isBridgeGateReason(value.gateReason)
+      && typeof value.skillHint === "string";
+  }
+
+  return false;
 }
 
 export function isPythonTransformRangeDetails(value: unknown): value is PythonTransformRangeDetails {
@@ -801,7 +853,8 @@ export function isPythonTransformRangeDetails(value: unknown): value is PythonTr
     isOptionalNumber(value.formulaErrorCount) &&
     isOptionalWorkbookCellChangeSummary(value.changes) &&
     isOptionalRecoveryCheckpointDetails(value.recovery) &&
-    isOptionalString(value.error)
+    isOptionalString(value.error) &&
+    isOptionalString(value.skillHint)
   );
 }
 

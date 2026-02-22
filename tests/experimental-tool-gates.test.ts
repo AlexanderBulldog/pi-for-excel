@@ -11,6 +11,12 @@ import {
   evaluatePythonBridgeGate,
   evaluateTmuxBridgeGate,
 } from "../src/tools/experimental-tool-gates.ts";
+import {
+  isBridgeGateError,
+  isLibreOfficeBridgeDetails,
+  isPythonBridgeDetails,
+  isTmuxBridgeDetails,
+} from "../src/tools/tool-details.ts";
 
 const emptySchema = Type.Object({});
 
@@ -33,7 +39,34 @@ function createTestTool(
   };
 }
 
-void test("keeps tmux tool registered but rejects when default URL is unavailable", async () => {
+function assertTmuxGateError(
+  details: unknown,
+  reason: "missing_bridge_url" | "bridge_unreachable",
+): void {
+  assert.ok(isTmuxBridgeDetails(details));
+  assert.equal(details.ok, false);
+  assert.equal(details.gateReason, reason);
+  assert.equal(details.skillHint, "tmux-bridge");
+}
+
+function assertPythonGateError(details: unknown): void {
+  assert.ok(isPythonBridgeDetails(details));
+  assert.equal(details.ok, false);
+  assert.equal(details.gateReason, "bridge_unreachable");
+  assert.equal(details.skillHint, "python-bridge");
+}
+
+function assertLibreOfficeGateError(
+  details: unknown,
+  reason: "missing_bridge_url" | "bridge_unreachable",
+): void {
+  assert.ok(isLibreOfficeBridgeDetails(details));
+  assert.equal(details.ok, false);
+  assert.equal(details.gateReason, reason);
+  assert.equal(details.skillHint, "python-bridge");
+}
+
+void test("keeps tmux tool registered and returns structured gate errors", async () => {
   let probeCalled = false;
 
   const tools = [createTestTool("tmux"), createTestTool("read_range")];
@@ -51,10 +84,19 @@ void test("keeps tmux tool registered but rejects when default URL is unavailabl
   const tmuxTool = gated.find((tool) => tool.name === "tmux");
   assert.ok(tmuxTool);
 
-  await assert.rejects(
-    () => tmuxTool.execute("call-1", {}),
-    /default URL|URL override/i,
-  );
+  const result = await tmuxTool.execute("call-1", {
+    action: "capture_pane",
+    session: "dev",
+  });
+
+  const text = result.content[0]?.type === "text" ? result.content[0].text : "";
+  assert.match(text, /default URL|URL override/i);
+  assert.match(text, /Skill: tmux-bridge/i);
+
+  const resultDetails: unknown = result.details;
+  assertTmuxGateError(resultDetails, "missing_bridge_url");
+  assert.ok(isTmuxBridgeDetails(resultDetails));
+  assert.equal(resultDetails.action, "capture_pane");
 
   assert.equal(probeCalled, true);
 });
@@ -82,20 +124,24 @@ void test("tmux hard gate re-checks execution on every call", async () => {
 
   bridgeUrl = undefined;
 
-  await assert.rejects(
-    () => gatedTmux.execute("call-2", {}),
-    /default URL|URL override/i,
-  );
+  const missingResult = await gatedTmux.execute("call-2", {});
+  const missingText = missingResult.content[0]?.type === "text" ? missingResult.content[0].text : "";
+  assert.match(missingText, /default URL|URL override/i);
+  assert.match(missingText, /Skill: tmux-bridge/i);
+  const missingDetails: unknown = missingResult.details;
+  assertTmuxGateError(missingDetails, "missing_bridge_url");
   assert.equal(executeCount, 1);
 
   bridgeUrl = "https://localhost:4441";
   configuredBridgeHealthy = false;
   defaultBridgeHealthy = true;
 
-  await assert.rejects(
-    () => gatedTmux.execute("call-3", {}),
-    /not reachable/i,
-  );
+  const unreachableResult = await gatedTmux.execute("call-3", {});
+  const unreachableText = unreachableResult.content[0]?.type === "text" ? unreachableResult.content[0].text : "";
+  assert.match(unreachableText, /not reachable/i);
+  assert.match(unreachableText, /Skill: tmux-bridge/i);
+  const unreachableDetails: unknown = unreachableResult.details;
+  assertTmuxGateError(unreachableDetails, "bridge_unreachable");
   assert.equal(executeCount, 1);
 });
 
@@ -284,7 +330,7 @@ void test("python fallback tools execute even when bridge gate fails", async () 
   assert.equal(approvalCalls, 0);
 });
 
-void test("python fallback tools still block when configured bridge is unreachable", async () => {
+void test("python fallback tools return structured gate errors when configured bridge is unreachable", async () => {
   let executeCount = 0;
 
   const [pythonTool] = await applyExperimentalToolGates([
@@ -297,10 +343,13 @@ void test("python fallback tools still block when configured bridge is unreachab
     probePythonBridge: () => Promise.resolve(false),
   });
 
-  await assert.rejects(
-    () => pythonTool.execute("call-python-unreachable", { code: "print('hi')" }),
-    /not reachable/i,
-  );
+  const result = await pythonTool.execute("call-python-unreachable", { code: "print('hi')" });
+  const text = result.content[0]?.type === "text" ? result.content[0].text : "";
+  assert.match(text, /not reachable/i);
+  assert.match(text, /Skill: python-bridge/i);
+
+  const resultDetails: unknown = result.details;
+  assertPythonGateError(resultDetails);
 
   assert.equal(executeCount, 0);
 });
@@ -318,13 +367,16 @@ void test("libreoffice_convert still requires configured + reachable bridge", as
     probePythonBridge: () => Promise.resolve(false),
   });
 
-  await assert.rejects(
-    () => toolWhenMissing.execute("call-libreoffice-missing", {
-      input_path: "/tmp/source.xlsx",
-      target_format: "csv",
-    }),
-    /default URL|URL override|not configured/i,
-  );
+  const missingResult = await toolWhenMissing.execute("call-libreoffice-missing", {
+    input_path: "/tmp/source.xlsx",
+    target_format: "csv",
+  });
+  const missingText = missingResult.content[0]?.type === "text" ? missingResult.content[0].text : "";
+  assert.match(missingText, /default URL|URL override|not configured/i);
+  assert.match(missingText, /Skill: python-bridge/i);
+
+  const missingDetails: unknown = missingResult.details;
+  assertLibreOfficeGateError(missingDetails, "missing_bridge_url");
 
   const [toolWhenUnreachable] = await applyExperimentalToolGates([
     createTestTool("libreoffice_convert", () => {
@@ -336,13 +388,16 @@ void test("libreoffice_convert still requires configured + reachable bridge", as
     probePythonBridge: () => Promise.resolve(false),
   });
 
-  await assert.rejects(
-    () => toolWhenUnreachable.execute("call-libreoffice-unreachable", {
-      input_path: "/tmp/source.xlsx",
-      target_format: "csv",
-    }),
-    /not reachable/i,
-  );
+  const unreachableResult = await toolWhenUnreachable.execute("call-libreoffice-unreachable", {
+    input_path: "/tmp/source.xlsx",
+    target_format: "csv",
+  });
+  const unreachableText = unreachableResult.content[0]?.type === "text" ? unreachableResult.content[0].text : "";
+  assert.match(unreachableText, /not reachable/i);
+  assert.match(unreachableText, /Skill: python-bridge/i);
+
+  const unreachableDetails: unknown = unreachableResult.details;
+  assertLibreOfficeGateError(unreachableDetails, "bridge_unreachable");
 
   assert.equal(executeCount, 0);
 });
@@ -454,4 +509,25 @@ void test("evaluatePythonBridgeGate reports explicit reason codes", async () => 
   assert.equal(unreachable.allowed, false);
   assert.equal(unreachable.reason, "bridge_unreachable");
   assert.match(buildPythonBridgeGateErrorMessage(unreachable.reason), /not reachable/i);
+});
+
+void test("bridge gate helper detects only gate-shaped bridge details", () => {
+  const gateError = {
+    kind: "python_bridge",
+    ok: false,
+    action: "run_python",
+    error: "Python bridge is not reachable at the configured URL.",
+    gateReason: "bridge_unreachable",
+    skillHint: "python-bridge",
+  };
+
+  const nonGateError = {
+    kind: "python_bridge",
+    ok: false,
+    action: "run_python",
+    error: "NameError: x is not defined",
+  };
+
+  assert.equal(isBridgeGateError(gateError), true);
+  assert.equal(isBridgeGateError(nonGateError), false);
 });

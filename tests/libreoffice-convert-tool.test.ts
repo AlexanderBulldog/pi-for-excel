@@ -30,9 +30,12 @@ void test("libreoffice_convert returns guidance when bridge URL is missing", asy
   });
 
   assert.match(firstText(result), /native Python bridge/u);
+  assert.match(firstText(result), /Skill: python-bridge/u);
   assert.equal(result.details?.kind, "libreoffice_bridge");
   assert.equal(result.details?.ok, false);
   assert.equal(result.details?.error, "missing_bridge_url");
+  assert.equal(result.details?.gateReason, "missing_bridge_url");
+  assert.equal(result.details?.skillHint, "python-bridge");
 });
 
 void test("libreoffice_convert validates absolute input_path", async () => {
@@ -119,9 +122,11 @@ void test("libreoffice_convert bridge errors are surfaced", async () => {
     target_format: "csv",
   });
 
-  assert.equal(firstText(result), "Error: bridge unavailable");
+  assert.match(firstText(result), /Error: bridge unavailable/u);
+  assert.match(firstText(result), /Skill: python-bridge/u);
   assert.equal(result.details?.ok, false);
   assert.equal(result.details?.error, "bridge unavailable");
+  assert.equal(result.details?.skillHint, "python-bridge");
 });
 
 void test("libreoffice_convert handles explicit bridge rejection payloads", async () => {

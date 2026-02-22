@@ -86,6 +86,8 @@ export interface PythonRunToolDetails {
   resultPreview?: string;
   truncated?: boolean;
   error?: string;
+  gateReason?: "missing_bridge_url" | "invalid_bridge_url" | "bridge_unreachable";
+  skillHint?: string;
 }
 
 export interface PythonRunToolDependencies {
@@ -384,6 +386,20 @@ function buildNoPythonAvailableMessage(): string {
   );
 }
 
+function withSkillHintLine(message: string, skillName: string): string {
+  return `${message}\nSkill: ${skillName}`;
+}
+
+function shouldAttachPythonBridgeSkillHint(message: string): boolean {
+  const normalized = message.toLowerCase();
+
+  return normalized.includes("python bridge")
+    || normalized.includes("bridge url")
+    || normalized.includes("no_python_runtime")
+    || normalized.includes("webassembly workers")
+    || normalized.includes("bridge");
+}
+
 export function shouldFallbackToPyodideAfterBridgeError(
   error: unknown,
   bridgeConfig: PythonBridgeConfig,
@@ -492,12 +508,16 @@ export function createPythonRunTool(
 
         if (!pyodideAvailable) {
           return {
-            content: [{ type: "text", text: buildNoPythonAvailableMessage() }],
+            content: [{
+              type: "text",
+              text: withSkillHintLine(buildNoPythonAvailableMessage(), "python-bridge"),
+            }],
             details: {
               kind: "python_bridge",
               ok: false,
               action: "run_python",
               error: "no_python_runtime",
+              skillHint: "python-bridge",
             },
           };
         }
@@ -524,14 +544,23 @@ export function createPythonRunTool(
         };
       } catch (error: unknown) {
         const message = getErrorMessage(error);
+        const skillHint = shouldAttachPythonBridgeSkillHint(message)
+          ? "python-bridge"
+          : undefined;
 
         return {
-          content: [{ type: "text", text: `Error: ${message}` }],
+          content: [{
+            type: "text",
+            text: skillHint
+              ? `Error: ${withSkillHintLine(message, skillHint)}`
+              : `Error: ${message}`,
+          }],
           details: {
             kind: "python_bridge",
             ok: false,
             action: "run_python",
             error: message,
+            skillHint,
           },
         };
       }

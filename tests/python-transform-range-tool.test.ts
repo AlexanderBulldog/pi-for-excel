@@ -40,9 +40,11 @@ void test("python_transform_range returns bridge setup guidance when URL is miss
   });
 
   assert.match(firstText(result), /Python is unavailable/u);
+  assert.match(firstText(result), /Skill: python-bridge/u);
   assert.equal(result.details?.kind, "python_transform_range");
   assert.equal(result.details?.blocked, false);
   assert.equal(result.details?.error, "no_python_runtime");
+  assert.equal(result.details?.skillHint, "python-bridge");
 });
 
 void test("python_transform_range falls back to Pyodide when default bridge URL is unavailable", async () => {

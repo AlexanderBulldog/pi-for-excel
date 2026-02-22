@@ -104,6 +104,8 @@ export interface LibreOfficeConvertToolDetails {
   bytes?: number;
   converter?: string;
   error?: string;
+  gateReason?: "missing_bridge_url" | "invalid_bridge_url" | "bridge_unreachable";
+  skillHint?: string;
 }
 
 export interface LibreOfficeConvertToolDependencies {
@@ -352,6 +354,21 @@ function buildMissingBridgeConfigurationMessage(): string {
   );
 }
 
+function withSkillHintLine(message: string, skillName: string): string {
+  return `${message}\nSkill: ${skillName}`;
+}
+
+function shouldAttachPythonBridgeSkillHint(message: string): boolean {
+  const normalized = message.toLowerCase();
+
+  return normalized.includes("python bridge")
+    || normalized.includes("libreoffice bridge")
+    || normalized.includes("python-bridge-url")
+    || normalized.includes("bridge url")
+    || normalized.includes("missing_bridge_url")
+    || normalized.includes("bridge");
+}
+
 export function createLibreOfficeConvertTool(
   dependencies: LibreOfficeConvertToolDependencies = {},
 ): AgentTool<TSchema, LibreOfficeConvertToolDetails> {
@@ -377,12 +394,17 @@ export function createLibreOfficeConvertTool(
         const bridgeConfig = await getBridgeConfig();
         if (!bridgeConfig) {
           return {
-            content: [{ type: "text", text: buildMissingBridgeConfigurationMessage() }],
+            content: [{
+              type: "text",
+              text: withSkillHintLine(buildMissingBridgeConfigurationMessage(), "python-bridge"),
+            }],
             details: {
               kind: "libreoffice_bridge",
               ok: false,
               action: "convert",
               error: "missing_bridge_url",
+              gateReason: "missing_bridge_url",
+              skillHint: "python-bridge",
             },
           };
         }
@@ -410,14 +432,23 @@ export function createLibreOfficeConvertTool(
         };
       } catch (error: unknown) {
         const message = getErrorMessage(error);
+        const skillHint = shouldAttachPythonBridgeSkillHint(message)
+          ? "python-bridge"
+          : undefined;
 
         return {
-          content: [{ type: "text", text: `Error: ${message}` }],
+          content: [{
+            type: "text",
+            text: skillHint
+              ? `Error: ${withSkillHintLine(message, skillHint)}`
+              : `Error: ${message}`,
+          }],
           details: {
             kind: "libreoffice_bridge",
             ok: false,
             action: "convert",
             error: message,
+            skillHint,
           },
         };
       }

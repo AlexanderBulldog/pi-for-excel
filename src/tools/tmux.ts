@@ -157,6 +157,8 @@ export interface TmuxToolDetails {
   sessionsCount?: number;
   outputPreview?: string;
   error?: string;
+  gateReason?: "missing_bridge_url" | "invalid_bridge_url" | "bridge_unreachable";
+  skillHint?: string;
 }
 
 export interface TmuxToolDependencies {
@@ -561,6 +563,20 @@ function buildMissingBridgeConfigurationMessage(): string {
   );
 }
 
+function withSkillHintLine(message: string, skillName: string): string {
+  return `${message}\nSkill: ${skillName}`;
+}
+
+function shouldAttachTmuxBridgeSkillHint(message: string): boolean {
+  const normalized = message.toLowerCase();
+
+  return normalized.includes("tmux bridge")
+    || normalized.includes("tmux-bridge-url")
+    || normalized.includes("bridge url")
+    || normalized.includes("missing_bridge_url")
+    || normalized.includes("bridge");
+}
+
 export function createTmuxTool(
   dependencies: TmuxToolDependencies = {},
 ): AgentTool<TSchema, TmuxToolDetails> {
@@ -588,12 +604,17 @@ export function createTmuxTool(
         const bridgeConfig = await getBridgeConfig();
         if (!bridgeConfig) {
           return {
-            content: [{ type: "text", text: buildMissingBridgeConfigurationMessage() }],
+            content: [{
+              type: "text",
+              text: withSkillHintLine(buildMissingBridgeConfigurationMessage(), "tmux-bridge"),
+            }],
             details: {
               kind: "tmux_bridge",
               ok: false,
               action: params.action,
               error: "missing_bridge_url",
+              gateReason: "missing_bridge_url",
+              skillHint: "tmux-bridge",
             },
           };
         }
@@ -626,14 +647,23 @@ export function createTmuxTool(
           (isRecord(rawParams) && isTmuxAction(rawParams.action)
             ? rawParams.action
             : "list_sessions");
+        const skillHint = shouldAttachTmuxBridgeSkillHint(message)
+          ? "tmux-bridge"
+          : undefined;
 
         return {
-          content: [{ type: "text", text: `Error: ${message}` }],
+          content: [{
+            type: "text",
+            text: skillHint
+              ? `Error: ${withSkillHintLine(message, skillHint)}`
+              : `Error: ${message}`,
+          }],
           details: {
             kind: "tmux_bridge",
             ok: false,
             action: fallbackAction,
             error: message,
+            skillHint,
           },
         };
       }

@@ -65,9 +65,12 @@ void test("tmux tool returns guidance when bridge URL is not configured", async 
 
   assert.match(firstText(result), /tmux-bridge-url/u);
   assert.match(firstText(result), /https:\/\/localhost:3341/u);
+  assert.match(firstText(result), /Skill: tmux-bridge/u);
   assert.equal(result.details?.kind, "tmux_bridge");
   assert.equal(result.details?.ok, false);
   assert.equal(result.details?.error, "missing_bridge_url");
+  assert.equal(result.details?.gateReason, "missing_bridge_url");
+  assert.equal(result.details?.skillHint, "tmux-bridge");
 });
 
 void test("tmux tool validates required session/action params", async () => {
@@ -175,10 +178,12 @@ void test("tmux bridge errors are surfaced to the user", async () => {
     session: "dev",
   });
 
-  assert.equal(firstText(result), "Error: bridge unavailable");
+  assert.match(firstText(result), /Error: bridge unavailable/u);
+  assert.match(firstText(result), /Skill: tmux-bridge/u);
   assert.equal(result.details?.ok, false);
   assert.equal(result.details?.action, "capture_pane");
   assert.equal(result.details?.error, "bridge unavailable");
+  assert.equal(result.details?.skillHint, "tmux-bridge");
 });
 
 void test("tmux tool handles explicit bridge-level rejection payloads", async () => {

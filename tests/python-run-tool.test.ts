@@ -28,9 +28,11 @@ void test("python_run returns guidance when no backend is available", async () =
   const result = await tool.execute("tc-missing", { code: "print('hello')" });
 
   assert.match(firstText(result), /Python is unavailable/u);
+  assert.match(firstText(result), /Skill: python-bridge/u);
   assert.equal(result.details?.kind, "python_bridge");
   assert.equal(result.details?.ok, false);
   assert.equal(result.details?.error, "no_python_runtime");
+  assert.equal(result.details?.skillHint, "python-bridge");
 });
 
 void test("python_run validates input_json before bridge call", async () => {
@@ -108,9 +110,11 @@ void test("python_run bridge errors are surfaced", async () => {
     code: "print('x')",
   });
 
-  assert.equal(firstText(result), "Error: bridge unavailable");
+  assert.match(firstText(result), /Error: bridge unavailable/u);
+  assert.match(firstText(result), /Skill: python-bridge/u);
   assert.equal(result.details?.ok, false);
   assert.equal(result.details?.error, "bridge unavailable");
+  assert.equal(result.details?.skillHint, "python-bridge");
 });
 
 void test("python_run falls back to Pyodide when default bridge URL is unavailable", async () => {
