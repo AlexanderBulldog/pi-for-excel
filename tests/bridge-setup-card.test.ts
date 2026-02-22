@@ -1,0 +1,142 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+
+import {
+  DEFAULT_PYTHON_BRIDGE_URL,
+  DEFAULT_TMUX_BRIDGE_URL,
+} from "../src/tools/experimental-tool-gates.ts";
+import type {
+  LibreOfficeBridgeDetails,
+  PythonBridgeDetails,
+  PythonTransformRangeDetails,
+  TmuxBridgeDetails,
+} from "../src/tools/tool-details.ts";
+import {
+  PYTHON_BRIDGE_SETUP_COMMAND,
+  TMUX_BRIDGE_SETUP_COMMAND,
+  resolveBridgeSetupCardModel,
+  shouldShowBridgeSetupCard,
+  testBridgeSetupConnection,
+} from "../src/ui/bridge-setup-card.ts";
+
+void test("shows tmux setup card for tmux bridge gate failures", () => {
+  const details: TmuxBridgeDetails = {
+    kind: "tmux_bridge",
+    ok: false,
+    action: "capture_pane",
+    error: "Tmux bridge is not reachable at the configured URL.",
+    gateReason: "bridge_unreachable",
+    skillHint: "tmux-bridge",
+  };
+
+  assert.equal(shouldShowBridgeSetupCard(details), true);
+
+  const model = resolveBridgeSetupCardModel(details);
+  assert.ok(model);
+  assert.equal(model.command, TMUX_BRIDGE_SETUP_COMMAND);
+  assert.equal(model.probeUrl, DEFAULT_TMUX_BRIDGE_URL);
+  assert.equal(model.title, "Terminal access is not available");
+});
+
+void test("uses bridge URL from details when testing tmux setup", () => {
+  const details: TmuxBridgeDetails = {
+    kind: "tmux_bridge",
+    ok: false,
+    action: "list_sessions",
+    bridgeUrl: "https://localhost:4441",
+    error: "Tmux bridge is not reachable at the configured URL.",
+    gateReason: "bridge_unreachable",
+    skillHint: "tmux-bridge",
+  };
+
+  const model = resolveBridgeSetupCardModel(details);
+  assert.ok(model);
+  assert.equal(model.probeUrl, "https://localhost:4441");
+});
+
+void test("shows python setup card when no Python runtime is available", () => {
+  const details: PythonBridgeDetails = {
+    kind: "python_bridge",
+    ok: false,
+    action: "run_python",
+    error: "no_python_runtime",
+    skillHint: "python-bridge",
+  };
+
+  assert.equal(shouldShowBridgeSetupCard(details), true);
+
+  const model = resolveBridgeSetupCardModel(details);
+  assert.ok(model);
+  assert.equal(model.command, PYTHON_BRIDGE_SETUP_COMMAND);
+  assert.equal(model.probeUrl, DEFAULT_PYTHON_BRIDGE_URL);
+  assert.equal(model.title, "Python is unavailable");
+});
+
+void test("shows python setup card for libreoffice bridge outages", () => {
+  const details: LibreOfficeBridgeDetails = {
+    kind: "libreoffice_bridge",
+    ok: false,
+    action: "convert",
+    bridgeUrl: "https://localhost:4450",
+    error: "Python bridge is not reachable at the configured URL.",
+    gateReason: "bridge_unreachable",
+    skillHint: "python-bridge",
+  };
+
+  const model = resolveBridgeSetupCardModel(details);
+  assert.ok(model);
+  assert.equal(model.command, PYTHON_BRIDGE_SETUP_COMMAND);
+  assert.equal(model.probeUrl, "https://localhost:4450");
+  assert.equal(model.title, "File conversion is unavailable");
+});
+
+void test("shows setup card for transform-range gate failures", () => {
+  const details: PythonTransformRangeDetails = {
+    kind: "python_transform_range",
+    blocked: false,
+    error: "Python bridge is not reachable at the configured URL.",
+    gateReason: "bridge_unreachable",
+    skillHint: "python-bridge",
+  };
+
+  assert.equal(shouldShowBridgeSetupCard(details), true);
+
+  const model = resolveBridgeSetupCardModel(details);
+  assert.ok(model);
+  assert.equal(model.command, PYTHON_BRIDGE_SETUP_COMMAND);
+  assert.equal(model.title, "Python transform is unavailable");
+});
+
+void test("does not show setup card for non-setup python errors", () => {
+  const details: PythonBridgeDetails = {
+    kind: "python_bridge",
+    ok: false,
+    action: "run_python",
+    error: "NameError: x is not defined",
+  };
+
+  assert.equal(shouldShowBridgeSetupCard(details), false);
+  assert.equal(resolveBridgeSetupCardModel(details), null);
+});
+
+void test("testBridgeSetupConnection probes the resolved URL", async () => {
+  const details: PythonBridgeDetails = {
+    kind: "python_bridge",
+    ok: false,
+    action: "run_python",
+    bridgeUrl: "https://localhost:5540",
+    error: "Python bridge is not reachable at the configured URL.",
+    gateReason: "bridge_unreachable",
+    skillHint: "python-bridge",
+  };
+
+  let probedUrl: string | null = null;
+
+  const reachable = await testBridgeSetupConnection(details, (url) => {
+    probedUrl = url;
+    return Promise.resolve(true);
+  });
+
+  assert.equal(reachable, true);
+  assert.equal(probedUrl, "https://localhost:5540");
+});

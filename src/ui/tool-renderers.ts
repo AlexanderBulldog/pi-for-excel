@@ -21,6 +21,10 @@ import {
   shouldShowSearchSetupCard,
 } from "./web-search-setup-card.js";
 import {
+  mountBridgeSetupCard,
+  shouldShowBridgeSetupCard,
+} from "./bridge-setup-card.js";
+import {
   isCommentsDetails,
   isConditionalFormatDetails,
   isExplainFormulaDetails,
@@ -1072,6 +1076,14 @@ function createExcelMarkdownRenderer(toolName: SupportedToolName): ToolRenderer<
           }
         };
 
+        // Bridge setup card: show inline setup for bridge-related failures.
+        const bridgeSetupDetails = shouldShowBridgeSetupCard(resultDetails) ? resultDetails : null;
+        const initBridgeSetup = (el: Element | undefined): void => {
+          if (el instanceof HTMLElement && bridgeSetupDetails) {
+            mountBridgeSetupCard(el, bridgeSetupDetails);
+          }
+        };
+
         return {
           content: html`
             <div class="pi-tool-card" data-state=${state} data-tool-name=${toolName}>
@@ -1128,6 +1140,7 @@ function createExcelMarkdownRenderer(toolName: SupportedToolName): ToolRenderer<
               </div>
             </div>
             ${searchSetupDetails !== null ? html`<div ${ref(initSearchSetup)}></div>` : html``}
+            ${bridgeSetupDetails !== null ? html`<div ${ref(initBridgeSetup)}></div>` : html``}
           `,
           isCustom: true,
         };
