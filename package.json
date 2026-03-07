@@ -13,6 +13,8 @@
     "tmux:bridge:https": "node scripts/tmux-bridge-server.mjs --https",
     "python:bridge": "node scripts/python-bridge-server.mjs",
     "python:bridge:https": "node scripts/python-bridge-server.mjs --https",
+    "fs:bridge": "node scripts/filesystem-bridge-server.mjs",
+    "fs:bridge:https": "node scripts/filesystem-bridge-server.mjs --https",
     "serve:dist": "node scripts/serve-dist-https.mjs",
     "manifest:prod": "node scripts/generate-manifest.mjs",
     "typecheck": "tsc --noEmit",
