@@ -66,6 +66,16 @@
   box-shadow: 0 1px 3px var(--alpha-4);
 }
 
+/* KaTeX defense — if math extensions somehow render despite the policy,
+   prevent the serif/italic font from leaking into the sidebar. This is
+   a CSS safety net that works regardless of which `marked` instance
+   produced the HTML. */
+markdown-block .katex,
+markdown-block .katex * {
+  font-family: var(--font-sans) !important;
+  font-style: normal !important;
+}
+
 /* Markdown — readable at sidebar width */
 markdown-block { line-height: 1.6; }
 markdown-block p { margin: 0 0 10px; font-size: var(--text-base); }
