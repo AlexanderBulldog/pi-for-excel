@@ -440,11 +440,11 @@ function withPayloadHook(
   const originalOnPayload = options?.onPayload;
   if (!captureSnapshot && !originalOnPayload) return options;
 
-  const onPayload = (payload: unknown) => {
+  const onPayload: NonNullable<StreamOptions["onPayload"]> = (payload, model) => {
     if (captureSnapshot) {
       upsertPayloadShape(call, payload);
     }
-    originalOnPayload?.(payload);
+    return originalOnPayload?.(payload, model);
   };
 
   if (options) return { ...options, onPayload };
