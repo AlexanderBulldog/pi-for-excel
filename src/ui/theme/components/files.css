@@ -509,3 +509,24 @@
 .pi-files-detail-actions__spacer {
   flex: 1;
 }
+
+/* ── Badge overrides inside file items (#490) ────── */
+.pi-files-item .pi-overlay-badge {
+  border-radius: var(--radius-xs);
+  border: none;
+  padding: 1px 5px;
+  font-size: 10px;
+}
+
+/* ── Text preview scroll fixes (#491) ────────────── */
+.pi-files-detail-preview--text {
+  max-height: min(400px, 50vh);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.pi-files-detail-preview__code {
+  white-space: pre;
+  overflow-x: auto;
+  text-overflow: unset;
+}
