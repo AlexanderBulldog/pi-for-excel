@@ -88,6 +88,7 @@ thinking-block markdown-block {
   color: var(--muted-foreground);
   max-height: 300px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Added by applyMessageStyleHooks() so we don't depend on utility classes. */
