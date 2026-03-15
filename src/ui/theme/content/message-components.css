@@ -131,6 +131,23 @@ thinking-block markdown-block {
   overscroll-behavior: contain;
 }
 
+/* Compact heading scale for thinking blocks — override the global
+   markdown-block heading rules which are sized for the message body. */
+thinking-block markdown-block h1,
+thinking-block markdown-block h2,
+thinking-block markdown-block h3 {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  margin: 8px 0 4px;
+}
+thinking-block markdown-block h4,
+thinking-block markdown-block h5,
+thinking-block markdown-block h6 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin: 6px 0 3px;
+}
+
 /* Added by applyMessageStyleHooks() so we don't depend on utility classes. */
 .pi-thinking-label--streaming {
   animation-duration: 1.2s;
