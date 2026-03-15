@@ -20,10 +20,12 @@ void test("isAllowedMarkdownUrl blocks unsafe protocols", () => {
   assert.equal(isAllowedMarkdownUrl(""), false);
 });
 
-void test("policy disables dollar-delimited KaTeX extensions", () => {
+void test("policy disables all KaTeX math extensions", () => {
   assert.equal(isMarkdownExtensionDisabledByPolicy("inlineMathDollar"), true);
   assert.equal(isMarkdownExtensionDisabledByPolicy("blockMathDollar"), true);
-  assert.equal(isMarkdownExtensionDisabledByPolicy("inlineMathLatex"), false);
+  assert.equal(isMarkdownExtensionDisabledByPolicy("inlineMathLatex"), true);
+  assert.equal(isMarkdownExtensionDisabledByPolicy("blockMathLatex"), true);
+  assert.equal(isMarkdownExtensionDisabledByPolicy("someOtherExtension"), false);
 });
 
 void test("markdown image plans never render <img>", () => {
