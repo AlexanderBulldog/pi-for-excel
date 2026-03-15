@@ -8,6 +8,46 @@
   border-radius: var(--pill-radius);
 }
 
+/* Group header — collapsible summary */
+.pi-tool-group__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+  text-align: left;
+  transition: color var(--duration-fast);
+}
+
+.pi-tool-group__header:hover {
+  color: var(--foreground);
+}
+
+.pi-tool-group__chevron {
+  font-size: 10px;
+  transition: transform var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.pi-tool-group:not(.pi-tool-group--collapsed) .pi-tool-group__chevron {
+  transform: rotate(90deg);
+}
+
+.pi-tool-group__label {
+  font-weight: 500;
+}
+
+/* Collapsed — hide individual tool cards */
+.pi-tool-group--collapsed > tool-message {
+  display: none;
+}
+
 /* Rows inside group */
 .pi-tool-group > tool-message {
   padding: 1px 6px;
