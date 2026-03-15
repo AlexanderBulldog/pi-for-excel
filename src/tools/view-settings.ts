@@ -6,7 +6,7 @@
 
 import { Type, type Static } from "@sinclair/typebox";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
-import { excelRun, qualifiedAddress } from "../excel/helpers.js";
+import { excelRun, parseCell, qualifiedAddress } from "../excel/helpers.js";
 import {
   getWorkbookChangeAuditLog,
   type AppendWorkbookChangeAuditEntryArgs,
@@ -341,18 +341,47 @@ async function executeViewSettingsAction(params: Params): Promise<ViewSettingsAc
 
       case "freeze_at": {
         if (!params.range) throw new Error("range is required for freeze_at");
-        const ref = params.sheet ? `${params.sheet}!${params.range}` : params.range;
-        const freezeRange = params.sheet
-          ? sheet.getRange(params.range)
-          : context.workbook.worksheets.getActiveWorksheet().getRange(params.range);
-        sheet.freezePanes.freezeAt(freezeRange);
+
+        // parseCell returns 0-indexed col and 1-indexed row.
+        // "freeze at B5" means rows 1-4 and column A are frozen — the
+        // anchor cell is the first *unfrozen* cell (exclusive).
+        const anchor = parseCell(params.range);
+        const frozenRows = anchor.row - 1; // 1-indexed → count above
+        const frozenCols = anchor.col; // 0-indexed col IS the count left of it
+
+        if (frozenRows === 0 && frozenCols === 0) {
+          // A1 means "nothing to freeze" — matches Excel UI which
+          // unfreezes when the anchor is A1.
+          sheet.freezePanes.unfreeze();
+          await context.sync();
+          sheet.load("name");
+          await context.sync();
+          return {
+            text: `Unfroze panes on "${sheet.name}" (freeze_at A1 = nothing to freeze).`,
+            outputAddress: qualifiedAddress(sheet.name, params.range),
+            changedCount: 1,
+            summary: `unfroze panes on ${sheet.name}`,
+          };
+        }
+
+        if (frozenCols === 0) {
+          sheet.freezePanes.freezeRows(frozenRows);
+        } else if (frozenRows === 0) {
+          sheet.freezePanes.freezeColumns(frozenCols);
+        } else {
+          // Build the frozen pane content range: A1 up to (but not
+          // including) the anchor cell.
+          const paneRange = sheet.getRangeByIndexes(0, 0, frozenRows, frozenCols);
+          sheet.freezePanes.freezeAt(paneRange);
+        }
+
         await context.sync();
         sheet.load("name");
         await context.sync();
 
         const fullAddr = qualifiedAddress(sheet.name, params.range);
         return {
-          text: `Froze panes at ${ref} on "${sheet.name}".`,
+          text: `Froze panes at ${params.range} on "${sheet.name}".`,
           outputAddress: fullAddr,
           changedCount: 1,
           summary: `froze panes at ${fullAddr}`,
