@@ -1,0 +1,23 @@
+FROM node:24-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+
+COPY . .
+RUN npm run build
+
+FROM caddy:2-alpine
+
+WORKDIR /app
+
+COPY --from=build /app/dist /usr/share/caddy
+COPY manifest.xml /app/manifest.xml
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY scripts/docker-entrypoint.sh /usr/local/bin/pi-for-excel-entrypoint
+
+RUN chmod +x /usr/local/bin/pi-for-excel-entrypoint
+
+ENTRYPOINT ["/usr/local/bin/pi-for-excel-entrypoint"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

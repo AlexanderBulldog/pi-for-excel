@@ -33,3 +33,8 @@ dist/
 
 # Session exports
 pi-session-*
+
+.env
+
+# Local generated install manifests
+local-artifacts/

@@ -112,6 +112,7 @@ import { loadDiscoverableAgentSkillsFromWorkspace } from "../skills/external-sto
 import { PI_SKILLS_CHANGED_EVENT } from "../skills/events.js";
 import { createSkillReadCache } from "../skills/read-cache.js";
 import { initAppStorage } from "../storage/init-app-storage.js";
+import { ensureCorporateGatewayConfigured } from "../config/corporate-gateway.js";
 import { renderError } from "../ui/loading.js";
 import { showFilesWorkspaceDialog } from "../ui/files-dialog.js";
 
@@ -222,6 +223,12 @@ export async function initTaskpane(opts: {
 
   // Seed a predictable proxy default for OAuth flows.
   await ensureDefaultProxyUrl(settings);
+
+  try {
+    await ensureCorporateGatewayConfigured(customProviders);
+  } catch (error: unknown) {
+    console.warn("[auth] Failed to configure corporate gateway:", error);
+  }
 
   // Migrate legacy web-search API keys to the connection store schema.
   try {
