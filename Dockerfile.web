@@ -8,16 +8,20 @@ RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 
-FROM caddy:2-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
-COPY --from=build /app/dist /usr/share/caddy
+COPY --from=build /app/dist /usr/share/app
 COPY manifest.xml /app/manifest.xml
-COPY Caddyfile /etc/caddy/Caddyfile
+COPY scripts/static-server.mjs /usr/local/bin/pi-for-excel-server.mjs
 COPY scripts/docker-entrypoint.sh /usr/local/bin/pi-for-excel-entrypoint
 
 RUN chmod +x /usr/local/bin/pi-for-excel-entrypoint
 
+EXPOSE 8080
+ENV STATIC_ROOT=/usr/share/app
+ENV PORT=8080
+
 ENTRYPOINT ["/usr/local/bin/pi-for-excel-entrypoint"]
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+CMD ["node", "/usr/local/bin/pi-for-excel-server.mjs"]

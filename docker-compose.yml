@@ -3,34 +3,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+    # Plain HTTP. Put your own Caddy (or any reverse proxy) in front for TLS and
+    # the /llm-gateway proxy. See deploy/Caddyfile.example.
+    # Bind to 127.0.0.1 if the reverse proxy runs on the same host.
     ports:
       - "8080:8080"
-      - "443:443"
-      - "80:80"
     env_file:
       - .env
     environment:
-      # Public HTTPS origin used inside manifest.prod.xml.
-      # Replace later when the internal URL is approved.
+      # Public HTTPS origin the reverse proxy serves. Used in manifest.prod.xml
+      # and as the same-origin base for runtime-config.json (/llm-gateway/...).
       ADDIN_BASE_URL: ${ADDIN_BASE_URL:-https://pi-excel.internal.test}
 
-      # Caddy site address. Use ADDIN_BASE_URL host for direct TLS, or ":8080"
-      # when another internal reverse proxy terminates HTTPS.
-      ADDIN_SITE_ADDRESS: ${ADDIN_SITE_ADDRESS:-:8080}
-
-      # Direct TLS options. For internal pilots, prefer mounting company-issued
-      # cert/key files and setting these paths. CADDY_TLS_INTERNAL=1 is a quick
-      # fallback, but every tester machine must trust Caddy's internal CA.
-      CADDY_TLS_CERT_FILE: ${CADDY_TLS_CERT_FILE:-}
-      CADDY_TLS_KEY_FILE: ${CADDY_TLS_KEY_FILE:-}
-      CADDY_TLS_INTERNAL: ${CADDY_TLS_INTERNAL:-}
-
-      # Optional first-run gateway preconfiguration.
+      # First-run gateway preconfiguration. The real API key is NOT set here; the
+      # host Caddy adds it server-side on the /llm-gateway upstream.
       CORPORATE_GATEWAY_NAME: ${CORPORATE_GATEWAY_NAME:-Company LLM}
       CORPORATE_GATEWAY_BASE_URL: ${OPENAI_BASE_URL:-}
       CORPORATE_GATEWAY_MODEL: ${LLM_MODEL:-}
-      CORPORATE_GATEWAY_API_KEY: ${OPENAI_API_KEY:-}
       CORPORATE_GATEWAY_CONTEXT_WINDOW: ${CORPORATE_GATEWAY_CONTEXT_WINDOW:-65536}
-      CORPORATE_GATEWAY_PROXY: ${CORPORATE_GATEWAY_PROXY:-1}
-      CORPORATE_GATEWAY_TLS_INSECURE_SKIP_VERIFY: ${CORPORATE_GATEWAY_TLS_INSECURE_SKIP_VERIFY:-1}
     restart: unless-stopped

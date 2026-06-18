@@ -1,12 +1,6 @@
 services:
   pi-for-excel:
-    ports:
-      - "443:443"
-    volumes:
-      - ./cert.pem:/certs/cert.pem:ro
-      - ./key.pem:/certs/key.pem:ro
     environment:
+      # Local rehearsal: pretend the host Caddy serves https://localhost.
+      # runtime-config.json then points at https://localhost/llm-gateway/...
       ADDIN_BASE_URL: https://localhost
-      ADDIN_SITE_ADDRESS: https://localhost
-      CADDY_TLS_CERT_FILE: /certs/cert.pem
-      CADDY_TLS_KEY_FILE: /certs/key.pem

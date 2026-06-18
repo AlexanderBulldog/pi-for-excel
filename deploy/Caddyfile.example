@@ -1,0 +1,45 @@
+# Host Caddy for Pi for Excel.
+#
+# This runs on the host (NOT in the add-in container). It does three things:
+#   1. terminate HTTPS with your IT-issued certificate
+#   2. reverse-proxy the static add-in container (127.0.0.1:8080)
+#   3. proxy /llm-gateway/* to the company LLM, adding the API key server-side
+#      so the browser never sees the real key
+#
+# Run it:  caddy run --config ./Caddyfile
+#
+# Replace the three placeholders: the site host, the cert/key paths, and the
+# upstream LLM origin + bearer key.
+
+pi-excel.company.local {
+	# IT-issued certificate, trusted by client machines.
+	# This must match the host of ADDIN_BASE_URL in .env.
+	tls /etc/ssl/pi-excel/fullchain.pem /etc/ssl/pi-excel/privkey.pem
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	# Server-side proxy to the company LLM. The browser only ever calls
+	# /llm-gateway/* on this host; the real API key stays here.
+	handle_path /llm-gateway/* {
+		reverse_proxy https://ai-proxy.yakov.partners {
+			header_up Host {upstream_hostport}
+			header_up -Origin
+			header_up -Referer
+			header_up Authorization "Bearer REPLACE_WITH_REAL_LLM_KEY"
+
+			# Drop this block once the upstream cert is trusted normally.
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+
+	# Everything else -> the static add-in container.
+	handle {
+		reverse_proxy 127.0.0.1:8080
+	}
+}
